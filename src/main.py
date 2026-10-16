@@ -1,11 +1,15 @@
+from src.core.projeto import Projeto
+
+
 def main():
-    print("=" * 50)
-    print("GENESIS 2.0")
-    print("=" * 50)
-    print()
-    print("Bem-vindo ao Genesis!")
-    print("Sua plataforma de desenvolvimento.")
-    print()
+    projeto = Projeto(
+        "O Último Segundo Antes...",
+        "livro"
+    )
+
+    print("ID:", projeto.id)
+    print("Projeto:", projeto.nome)
+    print("Tipo:", projeto.tipo)
 
 
 if __name__ == "__main__":
