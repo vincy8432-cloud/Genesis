@@ -17,3 +17,6 @@ temp/
 # Arquivos do sistema
 Thumbs.db
 .DS_Store
+
+# Backups locais
+backups/
