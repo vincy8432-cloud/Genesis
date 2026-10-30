@@ -236,3 +236,41 @@ def test_falha_na_substituicao_preserva_arquivo_original(
     temporarios = list(tmp_path.glob(".*.tmp"))
 
     assert temporarios == []
+
+
+def test_gerenciador_nao_adiciona_projeto_quando_salvamento_falha(
+    tmp_path,
+    monkeypatch,
+):
+    arquivo = tmp_path / "projetos.json"
+    armazenamento = ArmazenamentoJSON(arquivo)
+
+    projeto_existente = Projeto("Projeto existente", "livro")
+    armazenamento.salvar([projeto_existente])
+
+    gerenciador = GerenciadorProjetos(
+        armazenamento=armazenamento
+    )
+
+    conteudo_original = arquivo.read_text(encoding="utf-8")
+
+    def falhar_salvamento(projetos):
+        raise OSError("Falha simulada na gravacao.")
+
+    monkeypatch.setattr(
+        armazenamento,
+        "salvar",
+        falhar_salvamento,
+    )
+
+    with pytest.raises(OSError, match="Falha simulada"):
+        gerenciador.criar_projeto(
+            "Projeto novo",
+            "musica",
+        )
+
+    assert len(gerenciador.projetos) == 1
+
+    assert gerenciador.projetos[0].id == projeto_existente.id
+
+    assert arquivo.read_text(encoding="utf-8") == conteudo_original
