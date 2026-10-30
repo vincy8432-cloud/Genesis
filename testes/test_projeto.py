@@ -1,7 +1,22 @@
-
 import uuid
 import pytest
 
+from src.core.projeto import Projeto
+from src.core.gerenciador_projetos import GerenciadorProjetos
+from src.persistencia.armazenamento_json import ArmazenamentoJSON
+
+
+@pytest.fixture
+def gerenciador(tmp_path):
+    armazenamento = ArmazenamentoJSON(
+        tmp_path / "projetos.json"
+    )
+
+    return GerenciadorProjetos(
+        armazenamento=armazenamento
+    )
+
+from src.persistencia.armazenamento_json import ArmazenamentoJSON
 from src.core.projeto import Projeto
 from src.core.gerenciador_projetos import GerenciadorProjetos
 
@@ -27,9 +42,7 @@ def test_projetos_diferentes_tem_ids_diferentes():
     assert projeto1.id != projeto2.id
 
 
-def test_gerenciador_cria_e_armazena_projeto():
-    gerenciador = GerenciadorProjetos()
-
+def test_gerenciador_cria_e_armazena_projeto(gerenciador):
     projeto = gerenciador.criar_projeto("Livro Genesis", "livro")
 
     assert projeto.nome == "Livro Genesis"
@@ -37,18 +50,14 @@ def test_gerenciador_cria_e_armazena_projeto():
     assert projeto in gerenciador.projetos
 
 
-def test_gerenciador_busca_projeto_por_id():
-    gerenciador = GerenciadorProjetos()
-
+def test_gerenciador_busca_projeto_por_id(gerenciador):
     projeto = gerenciador.criar_projeto("Meu Livro", "livro")
     encontrado = gerenciador.buscar_por_id(projeto.id)
 
     assert encontrado is projeto
 
 
-def test_gerenciador_retorna_none_para_id_inexistente():
-    gerenciador = GerenciadorProjetos()
-
+def test_gerenciador_retorna_none_para_id_inexistente(gerenciador):
     resultado = gerenciador.buscar_por_id(uuid.uuid4())
 
     assert resultado is None

@@ -10,7 +10,10 @@ def test_salvar_e_carregar_projetos(tmp_path):
     arquivo = tmp_path / "projetos.json"
     armazenamento = ArmazenamentoJSON(arquivo)
 
-    gerenciador = GerenciadorProjetos()
+    gerenciador = GerenciadorProjetos(
+        armazenamento=armazenamento
+    )
+
     projeto = gerenciador.criar_projeto(
         "O Último Segundo Antes...",
         "livro"

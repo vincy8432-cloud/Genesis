@@ -6,12 +6,6 @@
         "status": "ativo"
     },
     {
-        "id": "c002ff37-96ba-42ea-83b0-1412ec7dbe23",
-        "nome": "Livro Genesis",
-        "tipo": "livro",
-        "status": "ativo"
-    },
-    {
         "id": "1a25b089-c8ac-40c2-bc87-7d7a745c6635",
         "nome": "Meu Livro",
         "tipo": "livro",
