@@ -1,28 +1,50 @@
 
 from src.core.projeto import Projeto
 from src.persistencia.armazenamento_json import ArmazenamentoJSON
+from src.estrutura.gerenciador_diretorios import GerenciadorDiretorios
 
 
 class GerenciadorProjetos:
-    def __init__(self, armazenamento=None):
+    def __init__(self, armazenamento=None, gerenciador_diretorios=None):
         if armazenamento is None:
             armazenamento = ArmazenamentoJSON(
                 "dados/projetos.json"
             )
 
+        if gerenciador_diretorios is None:
+            gerenciador_diretorios = GerenciadorDiretorios()
+
         self.armazenamento = armazenamento
+        self.gerenciador_diretorios = gerenciador_diretorios
         self.projetos = self.armazenamento.carregar()
 
     def criar_projeto(self, nome, tipo):
         projeto = Projeto(nome, tipo)
 
-        # Prepara a nova lista sem modificar a lista atual.
         projetos_atualizados = self.projetos + [projeto]
 
-        # Primeiro confirma a gravação.
-        self.armazenamento.salvar(projetos_atualizados)
+        diretorio_projeto = (
+            self.gerenciador_diretorios.diretorio_base
+            / str(projeto.id)
+        )
 
-        # Só atualiza a memória depois do sucesso.
+        estrutura_existia = diretorio_projeto.exists()
+
+        try:
+            # Cria a estrutura de diretórios.
+            self.gerenciador_diretorios.criar_estrutura(projeto)
+
+            # Persiste os dados do projeto.
+            self.armazenamento.salvar(projetos_atualizados)
+
+        except Exception:
+            # Remove a estrutura somente se ela foi criada agora.
+            if not estrutura_existia:
+                self.gerenciador_diretorios.remover_estrutura(projeto)
+
+            raise
+
+        # Atualiza a memória somente após o sucesso.
         self.projetos.append(projeto)
 
         return projeto

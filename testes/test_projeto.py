@@ -4,7 +4,7 @@ import pytest
 from src.core.projeto import Projeto
 from src.core.gerenciador_projetos import GerenciadorProjetos
 from src.persistencia.armazenamento_json import ArmazenamentoJSON
-
+from src.estrutura.gerenciador_diretorios import GerenciadorDiretorios
 
 @pytest.fixture
 def gerenciador(tmp_path):
@@ -12,14 +12,14 @@ def gerenciador(tmp_path):
         tmp_path / "projetos.json"
     )
 
-    return GerenciadorProjetos(
-        armazenamento=armazenamento
+    gerenciador_diretorios = GerenciadorDiretorios(
+        tmp_path / "projetos"
     )
 
-from src.persistencia.armazenamento_json import ArmazenamentoJSON
-from src.core.projeto import Projeto
-from src.core.gerenciador_projetos import GerenciadorProjetos
-
+    return GerenciadorProjetos(
+        armazenamento=armazenamento,
+        gerenciador_diretorios=gerenciador_diretorios,
+    )
 
 def test_criar_projeto():
     projeto = Projeto("Teste Genesis", "teste")
@@ -356,3 +356,39 @@ def test_listar_status_invalido(gerenciador):
 
     with pytest.raises(ValueError):
         gerenciador.listar_por_status("excluido")
+
+def test_criar_projeto_cria_estrutura_de_diretorios(gerenciador):
+    projeto = gerenciador.criar_projeto("Meu Livro", "livro")
+
+    diretorio = (
+        gerenciador.gerenciador_diretorios.diretorio_base
+        / str(projeto.id)
+    )
+
+    assert (diretorio / "arquivos").is_dir()
+    assert (diretorio / "materiais").is_dir()
+    assert (diretorio / "resultados").is_dir()
+
+
+def test_falha_ao_salvar_remove_estrutura_e_nao_adiciona_projeto(
+    gerenciador,
+    monkeypatch,
+):
+    def falhar_salvamento(projetos):
+        raise OSError("Falha simulada na gravação.")
+
+    monkeypatch.setattr(
+        gerenciador.armazenamento,
+        "salvar",
+        falhar_salvamento,
+    )
+
+    with pytest.raises(OSError):
+        gerenciador.criar_projeto("Projeto de teste", "livro")
+
+    diretorio_base = (
+        gerenciador.gerenciador_diretorios.diretorio_base
+    )
+
+    assert gerenciador.projetos == []
+    assert list(diretorio_base.iterdir()) == []

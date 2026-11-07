@@ -11,13 +11,17 @@ from src.core.projeto import Projeto
 from src.core.gerenciador_projetos import GerenciadorProjetos
 from src.persistencia.armazenamento_json import ArmazenamentoJSON
 from pathlib import Path
+from src.estrutura.gerenciador_diretorios import GerenciadorDiretorios
 
 def test_salvar_e_carregar_projetos(tmp_path):
     arquivo = tmp_path / "projetos.json"
     armazenamento = ArmazenamentoJSON(arquivo)
 
     gerenciador = GerenciadorProjetos(
-        armazenamento=armazenamento
+        armazenamento=armazenamento,
+        gerenciador_diretorios=GerenciadorDiretorios(
+            tmp_path / "projetos"
+        ),
     )
 
     projeto = gerenciador.criar_projeto(
