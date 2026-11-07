@@ -139,6 +139,13 @@ class ArmazenamentoJSON:
                         "não pode estar vazio."
                     )
 
+            # Valida o status depois de confirmar os campos.
+            if item["status"] not in Projeto.STATUS_PERMITIDOS:
+                raise ErroPersistenciaJSON(
+                    f"Status inválido no projeto {indice}: "
+                    f"{item['status']}"
+                )
+
             try:
                 id_projeto = UUID(item["id"])
             except ValueError as erro:

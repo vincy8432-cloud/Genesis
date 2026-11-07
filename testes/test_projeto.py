@@ -234,3 +234,125 @@ def test_falha_ao_remover_projeto_preserva_memoria_e_arquivo(
 
     assert gerenciador.buscar_por_id(projeto.id) is projeto
     assert arquivo.read_bytes() == conteudo_anterior
+
+def test_arquivar_projeto(gerenciador):
+    projeto = gerenciador.criar_projeto(
+        "Projeto para Arquivar",
+        "livro",
+    )
+
+    id_original = projeto.id
+
+    resultado = gerenciador.arquivar_projeto(id_original)
+
+    assert resultado is projeto
+    assert projeto.id == id_original
+    assert projeto.status == Projeto.STATUS_ARQUIVADO
+
+    # Confirma a persistência.
+    recarregado = GerenciadorProjetos(
+        armazenamento=gerenciador.armazenamento
+    )
+
+    projeto_recarregado = recarregado.buscar_por_id(id_original)
+
+    assert projeto_recarregado.status == Projeto.STATUS_ARQUIVADO
+
+
+def test_reativar_projeto(gerenciador):
+    projeto = gerenciador.criar_projeto(
+        "Projeto Arquivado",
+        "livro",
+    )
+
+    gerenciador.arquivar_projeto(projeto.id)
+
+    resultado = gerenciador.reativar_projeto(projeto.id)
+
+    assert resultado is projeto
+    assert projeto.status == Projeto.STATUS_ATIVO
+
+
+def test_arquivar_projeto_inexistente(gerenciador):
+    from uuid import uuid4
+
+    resultado = gerenciador.arquivar_projeto(uuid4())
+
+    assert resultado is None
+
+
+def test_falha_ao_arquivar_preserva_status(
+    gerenciador,
+    monkeypatch,
+):
+    projeto = gerenciador.criar_projeto(
+        "Projeto Protegido",
+        "livro",
+    )
+
+    conteudo_anterior = (
+        gerenciador.armazenamento.caminho_arquivo.read_bytes()
+    )
+
+    def falhar_salvamento(projetos):
+        raise OSError("Falha simulada no armazenamento.")
+
+    monkeypatch.setattr(
+        gerenciador.armazenamento,
+        "salvar",
+        falhar_salvamento,
+    )
+
+    import pytest
+
+    with pytest.raises(OSError):
+        gerenciador.arquivar_projeto(projeto.id)
+
+    assert projeto.status == Projeto.STATUS_ATIVO
+
+    assert (
+        gerenciador.armazenamento.caminho_arquivo.read_bytes()
+        == conteudo_anterior
+    )
+
+def test_listar_projetos_ativos(gerenciador):
+    projeto1 = gerenciador.criar_projeto("Livro 1", "livro")
+    projeto2 = gerenciador.criar_projeto("Livro 2", "livro")
+
+    gerenciador.arquivar_projeto(projeto2.id)
+
+    resultado = gerenciador.listar_por_status(
+        Projeto.STATUS_ATIVO
+    )
+
+    assert resultado == [projeto1]
+
+
+def test_listar_projetos_arquivados(gerenciador):
+    projeto1 = gerenciador.criar_projeto("Livro 1", "livro")
+    projeto2 = gerenciador.criar_projeto("Livro 2", "livro")
+
+    gerenciador.arquivar_projeto(projeto1.id)
+
+    resultado = gerenciador.listar_por_status(
+        Projeto.STATUS_ARQUIVADO
+    )
+
+    assert resultado == [projeto1]
+
+
+def test_listar_status_sem_resultados(gerenciador):
+    gerenciador.criar_projeto("Livro ativo", "livro")
+
+    resultado = gerenciador.listar_por_status(
+        Projeto.STATUS_ARQUIVADO
+    )
+
+    assert resultado == []
+
+
+def test_listar_status_invalido(gerenciador):
+    import pytest
+
+    with pytest.raises(ValueError):
+        gerenciador.listar_por_status("excluido")

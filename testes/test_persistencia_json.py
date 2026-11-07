@@ -274,3 +274,41 @@ def test_gerenciador_nao_adiciona_projeto_quando_salvamento_falha(
     assert gerenciador.projetos[0].id == projeto_existente.id
 
     assert arquivo.read_text(encoding="utf-8") == conteudo_original
+
+def test_rejeita_status_invalido_ao_salvar(tmp_path):
+    from src.persistencia.armazenamento_json import ErroPersistenciaJSON
+
+    armazenamento = ArmazenamentoJSON(
+        tmp_path / "projetos.json"
+    )
+
+    projeto = Projeto("Projeto Inválido", "livro")
+    projeto._status = "excluido"
+
+    with pytest.raises(ErroPersistenciaJSON):
+        armazenamento.salvar([projeto])
+
+
+def test_rejeita_status_invalido_ao_carregar(tmp_path):
+    from src.persistencia.armazenamento_json import ErroPersistenciaJSON
+
+    arquivo = tmp_path / "projetos.json"
+
+    arquivo.write_text(
+        """
+        [
+            {
+                "id": "c667904d-60cc-496e-9414-4a163a29e1ed",
+                "nome": "Projeto Inválido",
+                "tipo": "livro",
+                "status": "excluido"
+            }
+        ]
+        """,
+        encoding="utf-8",
+    )
+
+    armazenamento = ArmazenamentoJSON(arquivo)
+
+    with pytest.raises(ErroPersistenciaJSON):
+        armazenamento.carregar()
