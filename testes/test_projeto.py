@@ -81,3 +81,94 @@ def test_projeto_com_nome_apenas_de_espacos_e_rejeitado():
 def test_projeto_com_tipo_apenas_de_espacos_e_rejeitado():
     with pytest.raises(ValueError, match="O tipo do projeto é obrigatório."):
         Projeto("Meu Livro", "   ")
+
+
+def test_gerenciador_atualiza_projeto(gerenciador):
+    projeto = gerenciador.criar_projeto(
+        "Meu Livro",
+        "livro",
+    )
+
+    id_original = projeto.id
+
+    projeto_atualizado = gerenciador.atualizar_projeto(
+        id_original,
+        nome="O Último Segundo Antes...",
+        tipo="publicacao",
+    )
+
+    assert projeto_atualizado is projeto
+    assert projeto_atualizado.id == id_original
+    assert projeto_atualizado.nome == "O Último Segundo Antes..."
+    assert projeto_atualizado.tipo == "publicacao"
+    assert projeto_atualizado.status == "ativo"
+
+
+def test_gerenciador_atualiza_apenas_nome(gerenciador):
+    projeto = gerenciador.criar_projeto(
+        "Meu Livro",
+        "livro",
+    )
+
+    projeto_atualizado = gerenciador.atualizar_projeto(
+        projeto.id,
+        nome="Novo Nome",
+    )
+
+    assert projeto_atualizado.nome == "Novo Nome"
+    assert projeto_atualizado.tipo == "livro"
+
+
+def test_gerenciador_nao_atualiza_projeto_inexistente(gerenciador):
+    id_inexistente = uuid.uuid4()
+
+    resultado = gerenciador.atualizar_projeto(
+        id_inexistente,
+        nome="Projeto inexistente",
+    )
+
+    assert resultado is None
+    assert gerenciador.projetos == []
+
+
+def test_gerenciador_preserva_projeto_se_atualizacao_falhar(
+    gerenciador,
+    monkeypatch,
+):
+    projeto = gerenciador.criar_projeto(
+        "Projeto original",
+        "livro",
+    )
+
+    conteudo_original = (
+        gerenciador.armazenamento.caminho_arquivo.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    def falhar_salvamento(projetos):
+        raise OSError("Falha simulada na gravacao.")
+
+    monkeypatch.setattr(
+        gerenciador.armazenamento,
+        "salvar",
+        falhar_salvamento,
+    )
+
+    with pytest.raises(OSError, match="Falha simulada"):
+        gerenciador.atualizar_projeto(
+            projeto.id,
+            nome="Novo nome",
+        )
+
+    assert projeto.nome == "Projeto original"
+    assert projeto.tipo == "livro"
+    assert gerenciador.buscar_por_id(projeto.id) is projeto
+
+    conteudo_atual = (
+        gerenciador.armazenamento.caminho_arquivo.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert conteudo_atual == conteudo_original
