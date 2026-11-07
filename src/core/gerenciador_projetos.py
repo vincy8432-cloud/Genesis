@@ -65,6 +65,42 @@ class GerenciadorProjetos:
 
         return None
 
+        def remover_projeto(self, id_projeto):
+            for indice, projeto in enumerate(self.projetos):
+                if projeto.id == id_projeto:
+
+                    # Prepara uma lista sem o projeto selecionado.
+                    projetos_atualizados = self.projetos.copy()
+                    projeto_removido = projetos_atualizados.pop(indice)
+
+                    # Persiste antes de modificar a memória.
+                    self.armazenamento.salvar(projetos_atualizados)
+
+                    # Atualiza a lista original somente após o sucesso.
+                    self.projetos.pop(indice)
+
+                    return projeto_removido
+
+            return None
+
+    def remover_projeto(self, id_projeto):
+        for indice, projeto in enumerate(self.projetos):
+            if projeto.id == id_projeto:
+
+                # Prepara uma lista sem o projeto selecionado.
+                projetos_atualizados = self.projetos.copy()
+                projeto_removido = projetos_atualizados.pop(indice)
+
+                # Persiste antes de modificar a memória.
+                self.armazenamento.salvar(projetos_atualizados)
+
+                # Atualiza a lista original somente após o sucesso.
+                self.projetos.pop(indice)
+
+                return projeto_removido
+
+        return None
+
     def buscar_por_id(self, id_projeto):
         for projeto in self.projetos:
             if projeto.id == id_projeto:

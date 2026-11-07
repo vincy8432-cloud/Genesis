@@ -172,3 +172,65 @@ def test_gerenciador_preserva_projeto_se_atualizacao_falhar(
     )
 
     assert conteudo_atual == conteudo_original
+
+def test_remover_projeto_remove_e_persiste(gerenciador):
+    projeto = gerenciador.criar_projeto(
+        "Projeto para Remover",
+        "livro",
+    )
+
+    id_projeto = projeto.id
+
+    removido = gerenciador.remover_projeto(id_projeto)
+
+    assert removido is projeto
+    assert gerenciador.buscar_por_id(id_projeto) is None
+    assert projeto not in gerenciador.projetos
+
+    # Confirma que a remoção foi persistida.
+    gerenciador_recarregado = GerenciadorProjetos(
+        armazenamento=gerenciador.armazenamento
+    )
+
+    assert gerenciador_recarregado.buscar_por_id(id_projeto) is None
+
+
+def test_remover_projeto_inexistente_retorna_none(gerenciador):
+    from uuid import uuid4
+
+    quantidade_anterior = len(gerenciador.projetos)
+
+    resultado = gerenciador.remover_projeto(uuid4())
+
+    assert resultado is None
+    assert len(gerenciador.projetos) == quantidade_anterior
+
+
+def test_falha_ao_remover_projeto_preserva_memoria_e_arquivo(
+    gerenciador,
+    monkeypatch,
+):
+    projeto = gerenciador.criar_projeto(
+        "Projeto Protegido",
+        "livro",
+    )
+
+    arquivo = gerenciador.armazenamento.caminho_arquivo
+    conteudo_anterior = arquivo.read_bytes()
+
+    def falhar_salvamento(projetos):
+        raise OSError("Falha simulada no armazenamento.")
+
+    monkeypatch.setattr(
+        gerenciador.armazenamento,
+        "salvar",
+        falhar_salvamento,
+    )
+
+    import pytest
+
+    with pytest.raises(OSError):
+        gerenciador.remover_projeto(projeto.id)
+
+    assert gerenciador.buscar_por_id(projeto.id) is projeto
+    assert arquivo.read_bytes() == conteudo_anterior
