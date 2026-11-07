@@ -1,5 +1,6 @@
 import uuid
 import pytest
+import shutil
 
 from src.core.projeto import Projeto
 from src.core.gerenciador_projetos import GerenciadorProjetos
@@ -189,7 +190,8 @@ def test_remover_projeto_remove_e_persiste(gerenciador):
 
     # Confirma que a remoção foi persistida.
     gerenciador_recarregado = GerenciadorProjetos(
-        armazenamento=gerenciador.armazenamento
+        armazenamento=gerenciador.armazenamento,
+        gerenciador_diretorios=gerenciador.gerenciador_diretorios,
     )
 
     assert gerenciador_recarregado.buscar_por_id(id_projeto) is None
@@ -251,7 +253,8 @@ def test_arquivar_projeto(gerenciador):
 
     # Confirma a persistência.
     recarregado = GerenciadorProjetos(
-        armazenamento=gerenciador.armazenamento
+        armazenamento=gerenciador.armazenamento,
+        gerenciador_diretorios=gerenciador.gerenciador_diretorios,
     )
 
     projeto_recarregado = recarregado.buscar_por_id(id_original)
@@ -392,3 +395,49 @@ def test_falha_ao_salvar_remove_estrutura_e_nao_adiciona_projeto(
 
     assert gerenciador.projetos == []
     assert list(diretorio_base.iterdir()) == []
+
+def test_reabre_projeto_e_recupera_diretorios_faltantes(gerenciador):
+    projeto = gerenciador.criar_projeto("Meu Livro", "livro")
+
+    diretorio = (
+        gerenciador.gerenciador_diretorios.diretorio_base
+        / str(projeto.id)
+    )
+
+    arquivo = diretorio / "arquivos" / "capitulo.txt"
+    arquivo.write_text("Conteudo original", encoding="utf-8")
+
+    # Simula uma subpasta que foi apagada.
+    (diretorio / "materiais").rmdir()
+
+    # Simula a reabertura do Genesis.
+    recarregado = GerenciadorProjetos(
+        armazenamento=gerenciador.armazenamento,
+        gerenciador_diretorios=gerenciador.gerenciador_diretorios,
+    )
+
+    assert (diretorio / "materiais").is_dir()
+    assert arquivo.exists()
+    assert arquivo.read_text(encoding="utf-8") == "Conteudo original"
+
+    assert recarregado.buscar_por_id(projeto.id) is not None
+
+def test_reabre_projeto_e_recupera_diretorio_completo(gerenciador):
+    projeto = gerenciador.criar_projeto("Meu Livro", "livro")
+
+    diretorio = (
+        gerenciador.gerenciador_diretorios.diretorio_base
+        / str(projeto.id)
+    )
+
+    shutil.rmtree(diretorio)
+
+    recarregado = GerenciadorProjetos(
+        armazenamento=gerenciador.armazenamento,
+        gerenciador_diretorios=gerenciador.gerenciador_diretorios,
+    )
+
+    assert recarregado.buscar_por_id(projeto.id) is not None
+    assert (diretorio / "arquivos").is_dir()
+    assert (diretorio / "materiais").is_dir()
+    assert (diretorio / "resultados").is_dir()

@@ -18,6 +18,10 @@ class GerenciadorProjetos:
         self.gerenciador_diretorios = gerenciador_diretorios
         self.projetos = self.armazenamento.carregar()
 
+        # Recupera as estruturas dos projetos cadastrados.
+        for projeto in self.projetos:
+            self.gerenciador_diretorios.criar_estrutura(projeto)
+
     def criar_projeto(self, nome, tipo):
         projeto = Projeto(nome, tipo)
 
