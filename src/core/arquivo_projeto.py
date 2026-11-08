@@ -24,11 +24,33 @@ class ArquivoProjeto:
         self.id = uuid.uuid4()
         self.nome_original = caminho.name
         self.extensao = caminho.suffix.lower()
+
+        self.nome_armazenado = f"{self.id}{self.extensao}"
+        self.caminho_relativo = (
+            Path("arquivos") / self.nome_armazenado
+        )
         self.tamanho = caminho.stat().st_size
         self.categoria = categoria.strip()
         self.data_importacao = datetime.now(timezone.utc)
         self.hash_sha256 = self._calcular_hash(caminho)
+    @classmethod
+    def reconstruir(cls, dados):
+        arquivo = cls.__new__(cls)
 
+        arquivo.id = uuid.UUID(dados["id"])
+        arquivo.nome_original = dados["nome_original"]
+        arquivo.nome_armazenado = dados["nome_armazenado"]
+        arquivo.caminho_relativo = Path(
+            dados["caminho_relativo"]
+        )
+        arquivo.extensao = dados["extensao"]
+        arquivo.tamanho = dados["tamanho"]
+        arquivo.categoria = dados["categoria"]
+        arquivo.data_importacao = datetime.fromisoformat(
+            dados["data_importacao"]
+        )
+        arquivo.hash_sha256 = dados["hash_sha256"]
+        return arquivo
     @staticmethod
     def _calcular_hash(caminho):
         sha256 = hashlib.sha256()
